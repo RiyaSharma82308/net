@@ -1,21 +1,45 @@
-# app/views/auth_view.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.schemas.user import UserCreate,LoginRequest
 from app.database import get_db
-from app.schemas.user import UserCreate, UserOut
-from app.services.auth_service import signup_service, login_service
-from app.models.user import User
+from app.services.auth_service import AuthService
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+auth_router = APIRouter()
 
-@router.post("/signup", response_model=UserOut)
+@auth_router.post("/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
-    new_user, err = signup_service(user, db)
+    new_user, err = AuthService.signup(user, db)
+
+    if err == "Email already registered":
+        return {"status": "error", "message": err}, 409
     if err:
-        raise HTTPException(status_code=400, detail=err)
-    return new_user
+        return {"status": "error", "message": err}, 500
+
+    return {
+        "status": "success",
+        "message": "User created successfully",
+        "data": {
+            "user_id": new_user.user_id,
+            "name": new_user.name,
+            "email": new_user.email,
+            "role": new_user.role,
+            "contact_number": new_user.contact_number,
+            "location": new_user.location
+        }
+    }, 201
 
 
-@router.post("/login")
-def login(email: str, password: str, db: Session = Depends(get_db)):
-    return login_service(email, password, db)
+@auth_router.post("/login")
+def login(user: LoginRequest, db: Session = Depends(get_db)):
+    token, err = AuthService.login(user,db)
+    if err == "Invalid email or password":
+        return {"status": "error", "message":err}, 401
+    if err:
+        return {"status":"error", "message":err}, 500
+    
+    return {
+        "status": "success",
+        "message": "Login successful",
+        "access_token": token,
+        "token_type": "bearer"
+    }, 200

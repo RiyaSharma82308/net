@@ -1,28 +1,32 @@
-from sqlalchemy.orm import Session
-from app.schemas.user import UserCreate
-from app.repositories.auth_repo import create_user, get_user_by_email
-from app.utils.jwt import create_access_token
 from passlib.hash import bcrypt
+from app.repositories.user_repository import UserRepository
+from app.utils.jwt_handler import create_access_token
+class AuthService:
+    @staticmethod
+    def signup(user, db):
+        existing_user, err = UserRepository.get_user_by_email(user.email, db)
+        if err:
+            return None, "Database error during email check"
+        if existing_user:
+            return None, "Email already registered"
 
-def signup_service(user: UserCreate, db: Session):
-    existing_user, err = get_user_by_email(user.email, db)
-    if err:
-        return None, "Database error during email check"
-    if existing_user:
-        return None, "Email already registered"
+        safe_password = user.password[:72]
+        hashed_pw = bcrypt.hash(safe_password)
+        new_user, err = UserRepository.create_user(user, hashed_pw, db)
+        if err:
+            return None, f"User creation failed: {err}"
 
-    # ✅ Truncate password to 72 characters
-    safe_password = user.password[:72]
-    hashed_pw, err = create_user(user, bcrypt.hash(safe_password), db)
-    if err:
-        return None, "Database error during user creation"
-    return hashed_pw, None
-
-
-
-def login_service(email: str, password: str, db: Session):
-    user = get_user_by_email(email, db)
-    if not user or not bcrypt.verify(password, user.password_hash):
-        return None
-    token = create_access_token({"sub": user.email, "role": user.role.value})
-    return token
+        return new_user, None
+    
+    @staticmethod
+    def login(user_data, db):
+        user,err = UserRepository.get_user_by_email(user_data.email, db)
+        if err:
+            return None, "Database error during email check"
+        if not user:
+            return None, "Invalid email or password"
+        if not bcrypt.verify(user_data.password, user.password_hash):
+            return None, "Invalid email or password"
+        
+        token = create_access_token({"sub": user.email})
+        return token, None
