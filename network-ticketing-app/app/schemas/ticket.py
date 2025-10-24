@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from enum import Enum
 from typing import Optional
+from datetime import datetime
+
 
 class TicketStatus(str, Enum):
     new = "New"
@@ -21,17 +23,40 @@ class Priority(str, Enum):
     medium = "Medium"
     high = "High"
 
-class TicketCreate(BaseModel):
-    created_by: int
+# Request schema for ticket creation
+class TicketCreateRequest(BaseModel):
+    title: str
     issue_description: str
-    severity: Optional[Severity]
-    priority: Optional[Priority]
+    priority: Priority
+    severity: Optional[Severity] = None
+    location: Optional[str] = None
+    # issue_category_id: Optional[int] = None
+    # sla_id: Optional[int] = None
 
-class TicketOut(BaseModel):
+# Response schema for full ticket details
+class TicketResponse(BaseModel):
     ticket_id: int
+    title: str
     issue_description: str
     status: TicketStatus
     severity: Optional[Severity]
+    priority: Optional[Priority]
+    location: Optional[str]
+    created_by: int
+    assigned_to: Optional[int]
+    # issue_category_id: Optional[int]
+    # sla_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# Lightweight schema for listing tickets
+class TicketOut(BaseModel):
+    ticket_id: int
+    title: str
+    status: TicketStatus
     priority: Optional[Priority]
 
     class Config:

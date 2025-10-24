@@ -32,3 +32,12 @@ class UserRepository:
         except Exception as e:
             db.rollback()
             return None, str(e)
+        
+
+    @staticmethod
+    def get_all_users(db: Session):
+        try:
+            users = db.query(User).all()
+            return users,None
+        except Exception as e:
+            return None, str(e)

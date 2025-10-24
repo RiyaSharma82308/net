@@ -31,11 +31,11 @@ class Ticket(Base):
     status = Column(Enum(TicketStatus), default=TicketStatus.new)
     severity = Column(Enum(Severity), nullable=True)
     priority = Column(Enum(Priority), nullable=True)
-    issue_category_id = Column(Integer, ForeignKey("issue_categories.category_id"), nullable=True)
-    sla_id = Column(Integer, ForeignKey("slas.sla_id"), nullable=True)
+    # issue_category_id = Column(Integer, ForeignKey("issue_categories.category_id"), nullable=True)
+    # sla_id = Column(Integer, ForeignKey("slas.sla_id"), nullable=True)
     assigned_to = Column(Integer, ForeignKey("users.user_id"), nullable=True)
-    created_at = Column(TIMESTAMP)
-    updated_at = Column(TIMESTAMP)
+    created_at = Column(TIMESTAMP, nullable=False)
+    updated_at = Column(TIMESTAMP, nullable=False)
 
     # Relationships
     creator = relationship("User", foreign_keys=[created_by])

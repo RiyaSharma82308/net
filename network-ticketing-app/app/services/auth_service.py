@@ -1,6 +1,6 @@
 from passlib.hash import bcrypt
 from app.repositories.user_repository import UserRepository
-from app.utils.jwt_handler import create_access_token
+from app.utils.jwt_handler import JWTHandler
 class AuthService:
     @staticmethod
     def signup(user, db):
@@ -28,5 +28,5 @@ class AuthService:
         if not bcrypt.verify(user_data.password, user.password_hash):
             return None, "Invalid email or password"
         
-        token = create_access_token({"sub": user.email})
+        token = JWTHandler.create_access_token({"sub": user.email})
         return token, None
