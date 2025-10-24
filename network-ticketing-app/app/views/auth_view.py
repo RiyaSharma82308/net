@@ -30,7 +30,7 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
                 "user_id": new_user.user_id,
                 "name": new_user.name,
                 "email": new_user.email,
-                "role": new_user.role,
+                "role": new_user.role.value,
                 "contact_number": new_user.contact_number,
                 "location": new_user.location
             }
@@ -77,7 +77,7 @@ def get_current_user(
                 "user_id": user.user_id,
                 "name": user.name,
                 "email": user.email,
-                "role": user.role,
+                "role": user.role.value,
                 "contact_number": user.contact_number,
                 "location": user.location
             }
@@ -85,8 +85,3 @@ def get_current_user(
     )
 
 
-
-@auth_router.post("/test-schema")
-def test_schema(user: UserCreate):
-    print("Received user:", user.dict())
-    return {"status": "ok"}

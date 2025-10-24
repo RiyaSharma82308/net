@@ -1,18 +1,18 @@
 from app.models.ticket import Ticket
+from datetime import datetime
 
 class TicketRepository:
     @staticmethod
     def create_ticket(user_id: int, ticket_data, db):
         try:
             new_ticket = Ticket(
-                title = ticket_data.title,
                 issue_description = ticket_data.issue_description,
                 priority = ticket_data.priority,
                 severity = ticket_data.severity,
-                issue_category_id = ticket_data.issue_category_id,
-                sla_id = ticket_data.sla_id,
                 created_by = user_id,
-                status = "New"
+                status = "new",
+                created_at = datetime.utcnow(),
+                updated_at = datetime.utcnow()
             )
             db.add(new_ticket)
             db.commit()

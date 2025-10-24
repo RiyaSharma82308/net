@@ -13,7 +13,7 @@ class AuthMiddleware:
         payload, err = JWTHandler.decode_token(token)
         if err:
             return None, "Invalid or expired token"
-        email = payload.het("sub")
+        email = payload.get("sub")
         if not email:
             return None, "Token missing subject"
         

@@ -25,11 +25,9 @@ class Priority(str, Enum):
 
 # Request schema for ticket creation
 class TicketCreateRequest(BaseModel):
-    title: str
     issue_description: str
     priority: Priority
     severity: Optional[Severity] = None
-    location: Optional[str] = None
     # issue_category_id: Optional[int] = None
     # sla_id: Optional[int] = None
 
@@ -50,7 +48,7 @@ class TicketResponse(BaseModel):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Lightweight schema for listing tickets
 class TicketOut(BaseModel):
