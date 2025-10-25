@@ -7,6 +7,16 @@ from passlib.hash import bcrypt
 
 class UserRepository:
     @staticmethod
+    def get_user_by_id(user_id: int, db):
+        try:
+            user = db.query(User).filter(User.user_id == user_id).first()
+            if not user:
+                return None
+            return user
+        except Exception as e:
+            return None
+
+    @staticmethod
     def get_user_by_email(email: str, db: Session):
         try:
             user = db.query(User).filter(User.email == email).first()
@@ -41,3 +51,5 @@ class UserRepository:
             return users,None
         except Exception as e:
             return None, str(e)
+        
+    

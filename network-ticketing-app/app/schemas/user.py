@@ -6,6 +6,7 @@ class UserRole(str, Enum):
     agent = "agent"
     engineer = "engineer"
     manager = "manager"
+    admin = "admin"
 
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)

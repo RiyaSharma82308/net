@@ -28,8 +28,8 @@ class TicketCreateRequest(BaseModel):
     issue_description: str
     priority: Priority
     severity: Optional[Severity] = None
-    # issue_category_id: Optional[int] = None
-    # sla_id: Optional[int] = None
+    issue_category_id: Optional[int] = None
+    sla_id: Optional[int] = None
 
 # Response schema for full ticket details
 class TicketResponse(BaseModel):
@@ -42,8 +42,8 @@ class TicketResponse(BaseModel):
     location: Optional[str]
     created_by: int
     assigned_to: Optional[int]
-    # issue_category_id: Optional[int]
-    # sla_id: Optional[int]
+    issue_category_id: Optional[int]
+    sla_id: Optional[int]
     created_at: datetime
     updated_at: datetime
 
@@ -59,3 +59,11 @@ class TicketOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class AssignTicketRequest(BaseModel):
+    assigned_to: int
+
+
+class UpdateStatusRequest(BaseModel):
+    status: TicketStatus

@@ -5,7 +5,6 @@ from app.views.user_view import user_router
 from app.views.ticket_view import ticket_router
 
 network_ticketing_router = APIRouter()
-print("router loaded!!!!!!!!!!!!")
 network_ticketing_router.include_router(auth_router,prefix="/auth")
 network_ticketing_router.include_router(user_router,prefix="/user")
 network_ticketing_router.include_router(ticket_router,prefix="/tickets")
