@@ -3,15 +3,15 @@ from enum import Enum
 from typing import Optional
 from datetime import datetime
 
-
+# Enums for status, severity, and priority
 class TicketStatus(str, Enum):
-    new = "New"
-    assigned = "Assigned"
-    in_progress = "In Progress"
-    on_hold = "On Hold"
-    resolved = "Resolved"
-    closed = "Closed"
-    reopened = "Reopened"
+    new = "new"
+    assigned = "assigned"
+    in_progress = "in_progress"
+    on_hold = "on_hold"
+    resolved = "resolved"
+    closed = "closed"
+    reopened = "reopened"
 
 class Severity(str, Enum):
     low = "Low"
@@ -23,47 +23,51 @@ class Priority(str, Enum):
     medium = "Medium"
     high = "High"
 
-# Request schema for ticket creation
+# ✅ Request schema for ticket creation (used by customer/admin)
 class TicketCreateRequest(BaseModel):
     issue_description: str
-    priority: Priority
-    severity: Optional[Severity] = None
-    issue_category_id: Optional[int] = None
-    sla_id: Optional[int] = None
+    issue_category_id: int  # Now required
 
-# Response schema for full ticket details
+# ✅ Request schema for ticket classification (used by admin/manager/agent)
+class ClassifyTicketRequest(BaseModel):
+    severity: Severity
+    priority: Priority
+    sla_id: int
+
+# ✅ Request schema for assignment (used by admin)
+class AssignTicketRequest(BaseModel):
+    assigned_to: int
+
+# ✅ Request schema for status update (used by engineer/admin)
+class UpdateStatusRequest(BaseModel):
+    status: TicketStatus
+
+# ✅ Full ticket response schema
 class TicketResponse(BaseModel):
     ticket_id: int
-    title: str
+    title: Optional[str] = None
     issue_description: str
     status: TicketStatus
-    severity: Optional[Severity]
-    priority: Optional[Priority]
-    location: Optional[str]
+    severity: Optional[Severity] = None
+    priority: Optional[Priority] = None
+    location: Optional[str] = None
     created_by: int
-    assigned_to: Optional[int]
-    issue_category_id: Optional[int]
-    sla_id: Optional[int]
+    assigned_to: Optional[int] = None
+    issue_category_id: int
+    sla_id: Optional[int] = None
+    due_date: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # Pydantic v2 style
 
-# Lightweight schema for listing tickets
+# ✅ Lightweight schema for listing tickets
 class TicketOut(BaseModel):
     ticket_id: int
-    title: str
+    title: Optional[str] = None
     status: TicketStatus
-    priority: Optional[Priority]
+    priority: Optional[Priority] = None
 
     class Config:
         orm_mode = True
-
-
-class AssignTicketRequest(BaseModel):
-    assigned_to: int
-
-
-class UpdateStatusRequest(BaseModel):
-    status: TicketStatus

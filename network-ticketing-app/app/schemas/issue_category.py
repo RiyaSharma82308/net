@@ -4,12 +4,17 @@ from typing import Optional
 from datetime import datetime
 
 
-class IssueCategoryCreate(BaseModel):
+class IssueCategoryCreateRequest(BaseModel):
     category_name: str
 
-class IssueCategoryOut(BaseModel):
+class IssueCategoryUpdateRequest(BaseModel):
+    category_name: str
+
+class IssueCategoryResponse(BaseModel):
     category_id: int
     category_name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+

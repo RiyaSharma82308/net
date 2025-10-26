@@ -1,5 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Annotated
+
+
+
+
 
 class Severity(str, Enum):
     low = "Low"
@@ -11,16 +16,21 @@ class Priority(str, Enum):
     medium = "Medium"
     high = "High"
 
-class SLACreate(BaseModel):
+class SLACreateRequest(BaseModel):
     severity: Severity
     priority: Priority
-    time_limit_hr: int
+    time_limit_hr: Annotated[int, Field(gt=0)]
 
-class SLAOut(BaseModel):
+class SLAUpdateRequest(BaseModel):
+    severity: Severity
+    priority: Priority
+    time_limit_hr: Annotated[int, Field(gt=0)]
+
+class SLAResponse(BaseModel):
     sla_id: int
     severity: Severity
     priority: Priority
     time_limit_hr: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
