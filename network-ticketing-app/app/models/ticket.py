@@ -12,7 +12,6 @@ class TicketStatus(str, enum.Enum):
     closed = "closed"
     reopened = "reopened"
 
-
 class Severity(enum.Enum):
     low = "Low"
     medium = "Medium"
@@ -35,6 +34,7 @@ class Ticket(Base):
     issue_category_id = Column(Integer, ForeignKey("issue_categories.category_id"), nullable=False)
     sla_id = Column(Integer, ForeignKey("slas.sla_id"), nullable=True)
     assigned_to = Column(Integer, ForeignKey("users.user_id"), nullable=True)
+    address_id = Column(Integer, ForeignKey("address.address_id"), nullable=False)  
     created_at = Column(TIMESTAMP, nullable=False)
     updated_at = Column(TIMESTAMP, nullable=False)
     due_date = Column(TIMESTAMP, nullable=True)
@@ -42,5 +42,6 @@ class Ticket(Base):
     # Relationships
     creator = relationship("User", foreign_keys=[created_by])
     assignee = relationship("User", foreign_keys=[assigned_to])
-    sla = relationship("SLA") 
+    sla = relationship("SLA")
     issue_category = relationship("IssueCategory")
+    address = relationship("Address")  # ✅ New relationship

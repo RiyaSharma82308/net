@@ -5,12 +5,13 @@ from sqlalchemy.exc import SQLAlchemyError
 
 class TicketRepository:
     @staticmethod
-    def create_ticket(user_id: int, ticket_data, db, created_at, updated_at, due_date):
+    def create_ticket(user_id: int, ticket_data, db, created_at, updated_at, due_date, address_id: int):
         try:
             new_ticket = Ticket(
                 issue_description=ticket_data.issue_description,
                 issue_category_id=ticket_data.issue_category_id,
                 created_by=user_id,
+                address_id=address_id,  
                 status="new",
                 created_at=created_at,
                 updated_at=updated_at,
@@ -26,6 +27,7 @@ class TicketRepository:
         except Exception as e:
             db.rollback()
             return None, f"Unexpected error: {str(e)}"
+
 
     @staticmethod
     def get_tickets_without_sla(db):

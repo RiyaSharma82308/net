@@ -27,6 +27,7 @@ class Priority(str, Enum):
 class TicketCreateRequest(BaseModel):
     issue_description: str
     issue_category_id: int  # Now required
+    address_id: int
 
 # ✅ Request schema for ticket classification (used by admin/manager/agent)
 class ClassifyTicketRequest(BaseModel):
@@ -54,13 +55,15 @@ class TicketResponse(BaseModel):
     created_by: int
     assigned_to: Optional[int] = None
     issue_category_id: int
+    address_id: int  # ✅ Include this
     sla_id: Optional[int] = None
     due_date: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        from_attributes = True  # Pydantic v2 style
+        from_attributes = True
+
 
 # ✅ Lightweight schema for listing tickets
 class TicketOut(BaseModel):
@@ -68,6 +71,7 @@ class TicketOut(BaseModel):
     title: Optional[str] = None
     status: TicketStatus
     priority: Optional[Priority] = None
+    address_id: int  # ✅ Optional, based on use case
 
     class Config:
         orm_mode = True

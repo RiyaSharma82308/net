@@ -49,10 +49,13 @@ def create_ticket(
                 "assigned_to": ticket.assigned_to,
                 "created_at": str(ticket.created_at),
                 "updated_at": str(ticket.updated_at),
-                "due_date": str(ticket.due_date) if ticket.due_date else None
+                "due_date": str(ticket.due_date) if ticket.due_date else None,
+                "address_id": ticket.address_id  
             }
         }
     )
+
+
 
 # 🧮 Get Unclassified Tickets
 @ticket_router.get("/tickets/unclassified")

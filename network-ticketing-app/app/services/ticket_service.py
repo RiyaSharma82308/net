@@ -1,22 +1,33 @@
 from datetime import datetime, timedelta
 from app.models.sla import SLA
 from app.models.issue_category import IssueCategory
+from app.models.address import Address
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.assignment_repository import AssignmentRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.ticket import ClassifyTicketRequest
 from sqlalchemy.orm import Session
+from datetime import datetime
+
+
 
 class TicketService:
     @staticmethod
     def create_ticket(user, ticket_data, db):
-        if user.role.value not in ["customer", "admin"]:
-            return None, "Only customers and admins can create tickets"
+        if user.role.value != "customer":
+            return None, "Only customers can create tickets"
 
+        # Validate issue category
         category = db.query(IssueCategory).filter_by(category_id=ticket_data.issue_category_id).first()
         if not category:
             return None, f"Issue category with ID {ticket_data.issue_category_id} does not exist"
 
+        # ✅ Validate address
+        address = db.query(Address).filter_by(address_id=ticket_data.address_id, user_id=user.user_id).first()
+        if not address:
+            return None, f"Chosen address does not belong to the user"
+
+        # ✅ Create ticket
         now = datetime.utcnow()
         ticket, err = TicketRepository.create_ticket(
             user_id=user.user_id,
@@ -24,12 +35,14 @@ class TicketService:
             db=db,
             created_at=now,
             updated_at=now,
-            due_date=None
+            due_date=None,
+            address_id=ticket_data.address_id  # ✅ Pass address_id
         )
         if err:
             return None, f"Ticket creation failed: {err}"
 
         return ticket, None
+
 
     @staticmethod
     def get_unclassified_tickets(user, db):
