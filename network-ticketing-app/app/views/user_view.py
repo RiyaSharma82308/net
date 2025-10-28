@@ -21,7 +21,7 @@ def get_all_users(
             content={"status": "error", "message": err}
         )
     print("role is: ", user.role)
-    if not RoleGuard.has_role(user, ["manager"]):
+    if not RoleGuard.has_role(user, ["admin"]):
         return JSONResponse(
             status_code=403,
             content={"status": "error", "message": "Access denied"}
