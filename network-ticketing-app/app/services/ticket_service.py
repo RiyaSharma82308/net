@@ -206,3 +206,30 @@ class TicketService:
 
         # 👩‍💼 Admin can view any ticket — no restriction
         return ticket, None
+    
+
+    @staticmethod
+    def list_by_user(user_id: int, db):
+        tickets, err = TicketRepository.list_by_user(user_id, db)
+        if err:
+            return None, f"Failed to fetch tickets: {err}"
+
+        formatted = [TicketService._format_ticket(t) for t in tickets]
+        return formatted, None
+
+    @staticmethod
+    def _format_ticket(ticket):
+        return {
+            "ticket_id": ticket.ticket_id,
+            "created_by": ticket.created_by,
+            "issue_description": ticket.issue_description,
+            "status": ticket.status.value if hasattr(ticket.status, "value") else ticket.status,
+            "severity": ticket.severity.value if ticket.severity else None,
+            "priority": ticket.priority.value if ticket.priority else None,
+            "issue_category_id": ticket.issue_category_id,
+            "sla_id": ticket.sla_id,
+            "assigned_to": ticket.assigned_to,
+            "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
+            "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
+            "due_date": ticket.due_date.isoformat() if ticket.due_date else None
+        }

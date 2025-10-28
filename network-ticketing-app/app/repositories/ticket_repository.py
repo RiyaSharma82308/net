@@ -144,3 +144,12 @@ class TicketRepository:
             return None, f"Database error while fetching assigned tickets: {str(e)}"
         except Exception as e:
             return None, f"Unexpected error while fetching assigned tickets: {str(e)}"
+        
+
+    @staticmethod
+    def list_by_user(user_id: int, db):
+        try:
+            tickets = db.query(Ticket).filter(Ticket.created_by == user_id).all()
+            return tickets, None
+        except Exception as e:
+            return None, str(e)
