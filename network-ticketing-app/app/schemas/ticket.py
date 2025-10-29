@@ -75,3 +75,9 @@ class TicketOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class UpdateTicketRequest(BaseModel):
+    issue_description: str
+    issue_category_id: int
+    address_id: int

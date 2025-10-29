@@ -155,3 +155,45 @@ class TicketRepository:
             return tickets, None
         except Exception as e:
             return None, str(e)
+        
+
+
+    @staticmethod
+    def update_ticket_by_customer(ticket_id: int, user_id: int, payload, db: Session):
+        try:
+            ticket = db.query(Ticket).filter_by(ticket_id=ticket_id, created_by=user_id).first()
+            if not ticket:
+                return None, "Ticket not found or unauthorized"
+
+            ticket.issue_description = payload.issue_description
+            ticket.issue_category_id = payload.issue_category_id
+            ticket.address_id = payload.address_id
+            ticket.updated_at = datetime.utcnow()
+
+            db.commit()
+            db.refresh(ticket)
+            return ticket, None
+        except SQLAlchemyError as e:
+            db.rollback()
+            return None, f"DB error during ticket update: {str(e)}"
+        except Exception as e:
+            db.rollback()
+            return None, f"Unexpected error: {str(e)}"
+
+
+    @staticmethod
+    def delete_ticket_by_customer(ticket_id: int, user_id: int, db: Session):
+        try:
+            ticket = db.query(Ticket).filter_by(ticket_id=ticket_id, created_by=user_id).first()
+            if not ticket:
+                return None, "Ticket not found or unauthorized"
+
+            db.delete(ticket)
+            db.commit()
+            return True, None
+        except SQLAlchemyError as e:
+            db.rollback()
+            return None, f"Database error during deletion: {str(e)}"
+        except Exception as e:
+            db.rollback()
+            return None, f"Unexpected error during deletion: {str(e)}"

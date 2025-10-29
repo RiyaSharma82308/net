@@ -8,7 +8,8 @@ from app.schemas.ticket import (
     TicketCreateRequest,
     AssignTicketRequest,
     UpdateStatusRequest,
-    ClassifyTicketRequest
+    ClassifyTicketRequest,
+    UpdateTicketRequest
 )
 from app.database import get_db
 
@@ -285,4 +286,66 @@ def get_ticket_details(
                 "due_date": str(ticket.due_date) if ticket.due_date else None
             }
         }
+    )
+
+
+
+# customer can edit the raised ticket
+@ticket_router.put("/{ticket_id}/edit")
+def edit_ticket_by_customer(
+    ticket_id: int,
+    payload: UpdateTicketRequest,
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    if err:
+        return JSONResponse(status_code=401, content={"status": "error", "message": err})
+
+    ticket, err = TicketService.update_ticket_by_customer(ticket_id, payload, db, user)
+    if err:
+        return JSONResponse(
+            status_code=403 if "Only customers" in err else 400,
+            content={"status": "error", "message": err}
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Ticket updated successfully",
+            "data": {
+                "ticket_id": ticket.ticket_id,
+                "issue_description": ticket.issue_description,
+                "issue_category_id": ticket.issue_category_id,
+                "address_id": ticket.address_id,
+                "updated_at": str(ticket.updated_at)
+            }
+        }
+    )
+
+
+
+# customers can delete their raised ticket
+@ticket_router.delete("/{ticket_id}/delete")
+def delete_ticket_by_customer(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    if err:
+        return JSONResponse(status_code=401, content={"status": "error", "message": err})
+
+    success, err = TicketService.delete_ticket_by_customer(ticket_id, db, user)
+    if err:
+        status_code = 403 if "Only customers" in err or "unauthorized" in err else 400
+        return JSONResponse(status_code=status_code, content={"status": "error", "message": err})
+
+    if not success:
+        return JSONResponse(status_code=500, content={"status": "error", "message": "Unknown error during deletion"})
+
+    return JSONResponse(
+        status_code=200,
+        content={"status": "success", "message": "Ticket deleted successfully"}
     )

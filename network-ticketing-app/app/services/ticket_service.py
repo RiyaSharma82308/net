@@ -246,3 +246,24 @@ class TicketService:
             "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
             "due_date": ticket.due_date.isoformat() if ticket.due_date else None
         }
+    
+
+    
+    @staticmethod
+    def delete_ticket_by_customer(ticket_id: int, db: Session, user):
+        if user.role.value != "customer":
+            return None, "Only customers can delete their tickets"
+
+        ticket, err = TicketRepository.get_ticket_by_id(ticket_id, db)
+        if err:
+            return None, err
+        if not ticket:
+            return None, "Ticket not found"
+        if ticket.created_by != user.user_id:
+            return None, "You are not authorized to delete this ticket"
+
+        success, err = TicketRepository.delete_ticket_by_customer(ticket_id, user.user_id, db)
+        if err:
+            return None, err
+        return success, None
+
