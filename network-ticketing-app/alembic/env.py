@@ -19,6 +19,8 @@ from app.models.assignment import Assignment
 from app.models.feedback import Feedback
 from app.models.sla import SLA
 from app.models.ticket_action_log import TicketActionLog
+from app.models.refresh_token import RefreshToken
+
 
 # ✅ THIS is the correct metadata reference
 target_metadata = Base.metadata

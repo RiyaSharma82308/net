@@ -1,4 +1,5 @@
 from app.models.sla import SLA
+from app.models.ticket import Ticket
 
 class SLARepository:
     @staticmethod
@@ -50,4 +51,29 @@ class SLARepository:
             return True, None
         except Exception as e:
             db.rollback()
+            return None, str(e)
+        
+
+    @staticmethod
+    def filter_by_priority_severity(priority, severity, db):
+        try:
+            slas = db.query(SLA).filter(
+                SLA.priority == priority,
+                SLA.severity == severity
+            ).all()
+            return slas, None
+        except Exception as e:
+            return None, str(e)
+
+
+    @staticmethod
+    def get_tickets_with_sla_for_agent(db):
+        try:
+            tickets = (
+                db.query(Ticket)
+                .filter(Ticket.sla_id.isnot(None))
+                .all()
+            )
+            return tickets, None
+        except Exception as e:
             return None, str(e)

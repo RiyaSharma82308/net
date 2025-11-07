@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Enum, TIMESTAMP
+from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
 
@@ -20,3 +21,6 @@ class User(Base):
     location = Column(String(100))
     password_hash = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP)
+
+    # 🔐 Relationship to refresh tokens
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")

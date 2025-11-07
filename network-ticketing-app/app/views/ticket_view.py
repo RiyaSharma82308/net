@@ -11,6 +11,7 @@ from app.schemas.ticket import (
     ClassifyTicketRequest,
     UpdateTicketRequest
 )
+from app.utils.role_guard import RoleGuard
 from app.database import get_db
 
 ticket_router = APIRouter()
@@ -181,6 +182,24 @@ def change_ticket_status(
     )
 
 
+@ticket_router.get("/tickets/classified")
+def get_classified_tickets(
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    # ✅ Authenticate user
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    if err:
+        return JSONResponse(status_code=401, content={"status": "error", "message": err})
+
+    # ✅ Fetch classified tickets
+    response, err = TicketService.get_classified_tickets(user, db)
+    if err:
+        return JSONResponse(status_code=403 if "authorized" in err else 500, content={"status": "error", "message": err})
+
+    return JSONResponse(status_code=200, content={"status": "success", "data": response})
+
+
 @ticket_router.get("/tickets/assigned")
 def get_assigned_tickets(
     status: str = None,
@@ -247,7 +266,7 @@ def start_ticket_work(
         }
     )
 
-
+# for engineer
 
 @ticket_router.get("/tickets/{ticket_id}")
 def get_ticket_details(
@@ -349,3 +368,141 @@ def delete_ticket_by_customer(
         status_code=200,
         content={"status": "success", "message": "Ticket deleted successfully"}
     )
+
+
+
+# customer can view his own ticket
+@ticket_router.get("/ticket/{ticket_id}/summary")
+def get_ticket_summary_for_customer(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    # print("user is in view: ", user.role.value)
+    if err:
+        print("error is:- ", err)
+        return JSONResponse(status_code=401, content={"status": "error", "message": err})
+    
+    summary, err = TicketService.get_ticket_summary_for_customer(ticket_id, user, db)
+    if err:
+        status_code = 403 if "unauthorized" in err else 404
+        return JSONResponse(status_code=status_code, content={"status": "error", "message": err})
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Ticket summary fetched successfully",
+            "data": summary
+        }
+    )
+
+
+
+
+
+@ticket_router.get("/agent/all")
+def get_all_tickets_for_agent(
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    # ✅ Authentication
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    if err:
+        return JSONResponse(status_code=401, content={"status": "error", "message": err})
+
+    # ✅ Role check
+    if not RoleGuard.has_role(user, ["agent"]):
+        return JSONResponse(status_code=403, content={"status": "error", "message": "Access denied"})
+
+    # ✅ Fetch all tickets with users
+    data, err = TicketService.get_all_tickets_with_users(db)
+    if err:
+        return JSONResponse(status_code=400, content={"status": "error", "message": err})
+
+    return JSONResponse(status_code=200, content={"status": "success", "data": data})
+
+
+
+
+@ticket_router.patch("/agent/{ticket_id}/status")
+def agent_update_ticket_status(
+    ticket_id: int,
+    payload: UpdateStatusRequest,
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    # ✅ Authentication
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    if err:
+        return JSONResponse(status_code=401, content={"status": "error", "message": err})
+
+    # ✅ Role validation
+    if not RoleGuard.has_role(user, ["agent"]):
+        return JSONResponse(
+            status_code=403,
+            content={"status": "error", "message": "Access denied: Only agents can update ticket status."}
+        )
+
+    # ✅ Service call
+    ticket, err = TicketService.update_ticket_status_by_agent(ticket_id, payload.status.value, db)
+    if err:
+        return JSONResponse(status_code=400, content={"status": "error", "message": err})
+
+    # ✅ Success
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": f"Ticket status updated to '{ticket.status.value}'",
+            "data": {
+                "ticket_id": ticket.ticket_id,
+                "status": ticket.status.value
+            }
+        }
+    )
+
+
+
+
+
+
+# ♻️ Customer Reopen Ticket
+@ticket_router.patch("/tickets/{ticket_id}/reopen")
+def reopen_ticket_by_customer(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    # ✅ Authenticate customer
+    user, err = AuthMiddleware.get_current_user(credentials, db)
+    if err:
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "message": err}
+        )
+
+    # ✅ Service call
+    ticket, err = TicketService.reopen_ticket_by_customer(ticket_id, db, user)
+    if err:
+        status_code = 403 if "Only customers" in err or "authorized" in err else 400
+        return JSONResponse(
+            status_code=status_code,
+            content={"status": "error", "message": err}
+        )
+
+    # ✅ Success
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Ticket reopened successfully",
+            "data": {
+                "ticket_id": ticket.ticket_id,
+                "status": ticket.status.value if ticket.status else None,
+                "updated_at": str(ticket.updated_at)
+            }
+        }
+    )
+

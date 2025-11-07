@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.dependencies.auth import AuthMiddleware, security
 from app.repositories.user_repository import UserRepository
+from app.services.user_service import UserService
 from app.services.address_service import AddressService
 from app.services.ticket_service import TicketService  # ← make sure this exists
 from app.utils.role_guard import RoleGuard
@@ -21,7 +22,7 @@ def get_all_users(
     if err:
         return JSONResponse(status_code=401, content={"status": "error", "message": err})
 
-    if not RoleGuard.has_role(user, ["admin"]):
+    if not RoleGuard.has_role(user, ["admin", "agent", "manager"]):
         return JSONResponse(status_code=403, content={"status": "error", "message": "Access denied"})
 
     users, err = UserRepository.get_all_users(db)
@@ -47,6 +48,11 @@ def get_all_users(
             "data": serialized_users
         }
     )
+
+
+
+
+
 
 # 🧑‍💻 Customer: Dashboard view
 @user_router.get("/me/dashboard")
@@ -78,3 +84,6 @@ def get_customer_dashboard(
             "tickets": tickets if not ticket_err else []
         }
     })
+
+
+

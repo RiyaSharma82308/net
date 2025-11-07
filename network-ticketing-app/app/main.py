@@ -26,5 +26,5 @@ app.add_middleware(
 
 app.include_router(network_ticketing_router)
 # print("Creating tables now...")
-# Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 # print("Tables created.")

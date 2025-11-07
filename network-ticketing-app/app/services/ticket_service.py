@@ -5,9 +5,10 @@ from app.models.address import Address
 from app.repositories.ticket_repository import TicketRepository
 from app.repositories.assignment_repository import AssignmentRepository
 from app.repositories.user_repository import UserRepository
-from app.schemas.ticket import ClassifyTicketRequest
+from app.schemas.ticket import ClassifyTicketRequest, TicketResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
+from app.schemas.ticket import UpdateTicketRequest
 
 
 
@@ -87,8 +88,8 @@ class TicketService:
 
     @staticmethod
     def assign_ticket(user, ticket_id, payload, db):
-        if user.role.value != "admin":
-            return None, "Only admins can assign tickets"
+        if user.role.value == "customer":
+            return None, "Customers can't assign tickets!"
 
         engineer = UserRepository.get_user_by_id(payload.assigned_to, db)
         if not engineer or engineer.role.value != "engineer":
@@ -139,8 +140,8 @@ class TicketService:
         if user.role.value == "engineer":
             if ticket.assigned_to != user.user_id:
                 return None, "You are not assigned to this ticket"
-            if new_status not in ["on_hold", "resolved"]:
-                return None, "Engineers can only change status to 'on_hold' or 'resolved'"
+            if new_status not in ["on_hold", "resolved", "in_progress"]:
+                return None, "Engineers can only change status to 'on_hold', 'in_progress' or 'resolved'"
             if current_status not in ["assigned", "in_progress", "on_hold"]:
                 return None, f"Cannot change status from '{current_status}'"
 
@@ -248,6 +249,31 @@ class TicketService:
         }
     
 
+
+    
+    @staticmethod
+    def update_ticket_by_customer(ticket_id: int, payload: UpdateTicketRequest, db: Session, user):
+        if user.role.value != "customer":
+            return None, "Only customers can edit their own tickets"
+
+        # Validate required fields
+        if not payload.issue_description or not payload.issue_category_id or not payload.address_id:
+            return None, "Missing required fields"
+
+        # Fetch ticket
+        ticket, err = TicketRepository.get_ticket_by_customer(ticket_id, user.user_id, db)
+        if err:
+            return None, err
+
+        # Update ticket
+        updated_ticket, err = TicketRepository.update_ticket(ticket, payload, db)
+        if err:
+            return None, err
+
+        return updated_ticket, None
+
+
+
     
     @staticmethod
     def delete_ticket_by_customer(ticket_id: int, db: Session, user):
@@ -267,3 +293,188 @@ class TicketService:
             return None, err
         return success, None
 
+
+    @staticmethod
+    def get_ticket_summary_for_customer(ticket_id: int, user, db: Session):
+        print("user is: ", user.role.value)
+        if user.role.value != "customer":
+            return None, "Only customers can view their own tickets"
+
+        ticket, err = TicketRepository.get_ticket_by_id(ticket_id, db)
+        if err:
+            return None, err
+        if not ticket:
+            return None, "Ticket not found"
+        if ticket.created_by != user.user_id:
+            return None, "You are not authorized to view this ticket"
+
+        address, err = TicketRepository.get_address_by_id(ticket.address_id, user.user_id, db)
+        if err:
+            return None, err
+        if not address:
+            return None, "Address not found or unauthorized"
+
+        category, err = TicketRepository.get_issue_category_by_id(ticket.issue_category_id, db)
+        if err:
+            return None, err
+        if not category:
+            return None, "Issue category not found"
+
+        full_address = f"{address.street}, {address.city}, {address.state}, {address.postal_code}, {address.country}"
+
+        return {
+            "ticket_id": ticket.ticket_id,
+            "issue_description": ticket.issue_description,
+            "address": full_address,
+            "status": ticket.status,
+            "issue_category_id": ticket.issue_category_id,
+            "issue_category_name": category.category_name
+        }, None
+
+
+
+    @staticmethod
+    def get_classified_tickets(user, db):
+        if user.role.value not in ["admin", "manager", "agent"]:
+            return None, "Only authorized roles can view classified tickets"
+
+        tickets, err = TicketRepository.get_classified_tickets(db)
+        if err:
+            return None, f"Error fetching classified tickets: {err}"
+        if not tickets:
+            return [], None
+
+        response = [
+            TicketResponse(
+                ticket_id=t.ticket_id,
+                issue_description=t.issue_description,
+                status=t.status.value if hasattr(t.status, "value") else t.status,
+                priority=t.priority.value if t.priority else None,
+                severity=t.severity.value if t.severity else None,
+                created_by=t.created_by,
+                assigned_to=t.assigned_to,
+                issue_category_id=t.issue_category_id,
+                address_id=t.address_id,
+                sla_id=t.sla_id,
+                created_at=t.created_at,
+                updated_at=t.updated_at,
+                due_date=t.due_date
+            ).model_dump(mode="json")
+            for t in tickets
+        ]
+
+        return response, None
+
+
+
+    @staticmethod
+    def get_all_tickets_with_users(db):
+        tickets, err = TicketRepository.get_all_with_users(db)
+        if err:
+            return None, f"Error fetching tickets: {err}"
+
+        response = []
+        for t in tickets:
+            response.append({
+                "ticket_id": t.ticket_id,
+                "issue_description": t.issue_description,
+                "status": t.status.value if t.status else None,
+                "priority": t.priority.value if t.priority else None,
+                "severity": t.severity.value if t.severity else None,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+                "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "created_by": {
+                    "user_id": t.creator.user_id if t.creator else None,
+                    "name": t.creator.name if t.creator else None,
+                    "email": t.creator.email if t.creator else None,
+                    "role": t.creator.role.value if t.creator and t.creator.role else None,
+                    "contact_number": t.creator.contact_number if t.creator else None,
+                    "location": t.creator.location if t.creator else None
+                },
+                "assigned_to": {
+                    "user_id": t.assignee.user_id if t.assignee else None,
+                    "name": t.assignee.name if t.assignee else None,
+                    "email": t.assignee.email if t.assignee else None,
+                    "role": t.assignee.role.value if t.assignee and t.assignee.role else None,
+                    "contact_number": t.assignee.contact_number if t.assignee else None,
+                    "location": t.assignee.location if t.assignee else None
+                }
+            })
+
+        return response, None
+    
+
+    @staticmethod
+    def update_ticket_status_by_agent(ticket_id: int, new_status: str, db: Session):
+        # ✅ Fetch ticket
+        ticket, err = TicketRepository.get_ticket_by_id(ticket_id, db)
+        if err:
+            return None, err
+        if not ticket:
+            return None, "Ticket not found"
+
+        current_status = ticket.status.value.lower()
+        new_status = new_status.lower()
+
+        # ✅ Define valid transitions
+        valid_transitions = {
+            "resolved": ["closed"],
+            "closed": ["reopened"]
+        }
+
+        # ✅ Validate current status
+        if current_status not in valid_transitions:
+            return None, f"Tickets with status '{current_status}' cannot be modified by agent"
+
+        # ✅ Validate next status
+        allowed_next = valid_transitions[current_status]
+        if new_status not in allowed_next:
+            return None, f"Invalid transition: '{current_status}' → '{new_status}'"
+
+        # ✅ Update via repository
+        updated_ticket, err = TicketRepository.update_status(ticket_id, new_status, db)
+        if err:
+            return None, f"Failed to update ticket status: {err}"
+
+        return updated_ticket, None
+
+
+
+    @staticmethod
+    def reopen_ticket_by_customer(ticket_id: int, db: Session, user):
+            # ✅ Role check
+        if user.role.value != "customer":
+            return None, "Only customers can reopen tickets"
+
+            # ✅ Fetch ticket
+        ticket, err = TicketRepository.get_ticket_by_id(ticket_id, db)
+        if err:
+            return None, err
+        if not ticket:
+            return None, "Ticket not found"
+
+            # ✅ Ownership check
+        if ticket.created_by != user.user_id:
+            return None, "You are not authorized to reopen this ticket"
+
+            # ✅ Status check
+        if ticket.status.value.lower() not in ["resolved", "closed"]:
+            return None, f"Only resolved or closed tickets can be reopened (current: {ticket.status.value})"
+
+            # ✅ Optional — Time window (48 hours)
+        if ticket.updated_at:
+            time_diff = datetime.utcnow() - ticket.updated_at
+            if time_diff.total_seconds() > 48 * 3600:
+                return None, "Reopen window expired (only within 48 hours allowed)"
+
+            # ✅ Update status to 'reopened'
+        updated_ticket, err = TicketRepository.update_status(ticket_id, "reopened", db)
+        if err:
+            return None, err
+
+        return updated_ticket, None
+
+
+
+        

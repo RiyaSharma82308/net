@@ -1,7 +1,11 @@
 from app.models.ticket import Ticket
+from app.models.address import Address
+from app.models.issue_category import IssueCategory
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from app.schemas.ticket import UpdateTicketRequest
+
 
 class TicketRepository:
     @staticmethod
@@ -197,3 +201,121 @@ class TicketRepository:
         except Exception as e:
             db.rollback()
             return None, f"Unexpected error during deletion: {str(e)}"
+
+
+    @staticmethod
+    def get_address_by_id(address_id: int, user_id: int, db: Session):
+        try:
+            address = db.query(Address).filter_by(address_id=address_id, user_id=user_id).first()
+            if not address:
+                return None, "Address not found or unauthorized"
+            return address, None
+        except SQLAlchemyError as e:
+            db.rollback()
+            return None, f"Database error while fetching address: {str(e)}"
+        except Exception as e:
+            db.rollback()
+            return None, f"Unexpected error while fetching address: {str(e)}"
+
+
+
+    @staticmethod
+    def get_issue_category_by_id(category_id: int, db: Session):
+        try:
+            category = db.query(IssueCategory).filter_by(category_id=category_id).first()
+            if not category:
+                return None, "Issue category not found"
+            return category, None
+        except Exception as e:
+            db.rollback()
+            return None, f"Database error while fetching issue category: {str(e)}"
+
+
+
+    @staticmethod
+    def get_ticket_by_customer(ticket_id: int, user_id: int, db: Session):
+        try:
+            ticket = db.query(Ticket).filter_by(ticket_id=ticket_id, created_by=user_id).first()
+            if not ticket:
+                return None, "Ticket not found or unauthorized"
+            return ticket, None
+        except Exception as e:
+            db.rollback()
+            return None, f"Database error while fetching ticket: {str(e)}"
+
+    @staticmethod
+    def update_ticket(ticket: Ticket, payload: UpdateTicketRequest, db: Session):
+        try:
+            ticket.issue_description = payload.issue_description
+            ticket.issue_category_id = payload.issue_category_id
+            ticket.address_id = payload.address_id
+            db.commit()
+            db.refresh(ticket)
+            return ticket, None
+        except Exception as e:
+            db.rollback()
+            return None, f"Database error while updating ticket: {str(e)}"
+
+
+
+    @staticmethod
+    def get_classified_tickets(db):
+        try:
+            tickets = db.query(Ticket).filter(
+                Ticket.status == "new",
+                Ticket.priority.isnot(None),
+                Ticket.severity.isnot(None),
+                Ticket.assigned_to.is_(None)
+            ).all()
+            return tickets, None
+        except Exception as e:
+            return None, str(e)
+
+        
+
+    @staticmethod
+    def get_all_with_users(db):
+        try:
+            # Fetch all tickets and eager-load user relationships
+            tickets = db.query(Ticket).all()
+            return tickets, None
+        except Exception as e:
+            return None, str(e)
+        
+
+    @staticmethod
+    def update_status(ticket_id, new_status, db):
+        try:
+            ticket = db.query(Ticket).filter_by(ticket_id=ticket_id).first()
+            if not ticket:
+                return None, "Ticket not found"
+
+            ticket.status = new_status
+            ticket.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(ticket)
+            return ticket, None
+        except SQLAlchemyError as e:
+            db.rollback()
+            return None, f"Database error during status update: {str(e)}"
+        except Exception as e:
+            db.rollback()
+            return None, f"Unexpected error during status update: {str(e)}"
+
+
+
+    @staticmethod
+    def update_status(ticket_id: int, new_status: str, db: Session):
+        try:
+            ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+            if not ticket:
+                return None, "Ticket not found"
+
+            ticket.status = new_status
+            ticket.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(ticket)
+            return ticket, None
+        except SQLAlchemyError as e:
+            db.rollback()
+            return None, str(e)

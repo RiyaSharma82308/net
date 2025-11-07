@@ -26,7 +26,7 @@ class Priority(str, Enum):
 # ✅ Request schema for ticket creation (used by customer/admin)
 class TicketCreateRequest(BaseModel):
     issue_description: str
-    issue_category_id: int  # Now required
+    issue_category_id: int
     address_id: int
 
 # ✅ Request schema for ticket classification (used by admin/manager/agent)
@@ -55,7 +55,7 @@ class TicketResponse(BaseModel):
     created_by: int
     assigned_to: Optional[int] = None
     issue_category_id: int
-    address_id: int  # ✅ Include this
+    address_id: int
     sla_id: Optional[int] = None
     due_date: Optional[datetime] = None
     created_at: datetime
@@ -63,7 +63,9 @@ class TicketResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 # ✅ Lightweight schema for listing tickets
 class TicketOut(BaseModel):
@@ -71,12 +73,12 @@ class TicketOut(BaseModel):
     title: Optional[str] = None
     status: TicketStatus
     priority: Optional[Priority] = None
-    address_id: int  # ✅ Optional, based on use case
+    address_id: int
 
     class Config:
         orm_mode = True
 
-
+# ✅ Request schema for customer ticket update
 class UpdateTicketRequest(BaseModel):
     issue_description: str
     issue_category_id: int
